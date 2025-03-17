@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>攻殻機動隊</title><description>ネットは広大だわ。</description><link>https://cowboy-bebug.github.io/</link><item><title>Automatic Theme Switching for Dotfiles</title><link>https://cowboy-bebug.github.io/posts/automatic-theme-switching-for-dotfiles/</link><guid isPermaLink="true">https://cowboy-bebug.github.io/posts/automatic-theme-switching-for-dotfiles/</guid><description>A deep dive into automating day-and-night theme switching across dotfiles using stow + envsubst. Covers alternative tools like yadm and chezmoi, and shares practical tips, including handling Neovim caching.</description><pubDate>Sun, 16 Mar 2025 21:23:18 GMT</pubDate><content:encoded>&lt;h2&gt;Background&lt;/h2&gt;
+&lt;p&gt;Following up on my previous post,
+&lt;a href=&quot;./20250314T043721--automatic-theme-switching-for-vs-code__config_vscode.md&quot;&gt;Automatic Theme Switching for VS Code&lt;/a&gt;,
+I wanted to extend &lt;em&gt;day-and-night theme switching&lt;/em&gt; across all my dotfiles.&lt;/p&gt;
+&lt;h2&gt;Existing Tools&lt;/h2&gt;
+&lt;p&gt;There are many existing tools for managing dotfiles dynamically. Here are a
+couple examples:&lt;/p&gt;
+&lt;h3&gt;Using &lt;a href=&quot;https://yadm.io/&quot;&gt;yadm&lt;/a&gt;:&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;# Split the config into two versions:
+cp ~/.config/alacritty/alacritty.yml ~/.config/alacritty/alacritty.yml##theme=day
+cp ~/.config/alacritty/alacritty.yml ~/.config/alacritty/alacritty.yml##theme=night
+
+# Tell yadm to switch between themes:
+yadm alt theme=day yadm alt theme=night #+end_src
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Using &lt;a href=&quot;https://www.chezmoi.io/&quot;&gt;chezmoi&lt;/a&gt;:&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;{{ if eq .theme &quot;day&quot; }}
+import = [&quot;~/.local/share/alacritty-theme/themes/atom_one_light.toml&quot;]
+{{ else }}
+import = [&quot;~/.local/share/alacritty-theme/themes/onedark.toml&quot;]
+{{ end }}
+#+end_src
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;chezmoi set --local theme night
+chezmoi apply
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;My Approach with &lt;code&gt;stow&lt;/code&gt; + &lt;code&gt;envsubst&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;However since my dotfiles repo is heavily based on
+&lt;a href=&quot;https://www.gnu.org/software/stow/&quot;&gt;stow&lt;/a&gt;, I wanted a solution that integrates
+well with it. That&apos;s when I came across &lt;code&gt;envsubst&lt;/code&gt; from
+&lt;a href=&quot;https://www.gnu.org/software/gettext/&quot;&gt;GNU gettext&lt;/a&gt;, which immediately stood
+out for its &lt;strong&gt;portability&lt;/strong&gt; and &lt;strong&gt;availability&lt;/strong&gt; as a standard GNU utility.&lt;/p&gt;
+&lt;p&gt;I ended up implementing
+&lt;a href=&quot;https://github.com/cowboy-bebug/dotfiles/commit/0bf9cbb86b74c531da1793f7ad3a375649e3b9d1&quot;&gt;0bf9cbb8&lt;/a&gt;
+as my solution. Using &lt;code&gt;envsubst&lt;/code&gt; is &lt;strong&gt;simple and minimal&lt;/strong&gt;, as expected from a
+GNU utility.&lt;/p&gt;
+&lt;h2&gt;Implementation&lt;/h2&gt;
+&lt;p&gt;First, I created a &lt;strong&gt;template file&lt;/strong&gt; using a shell variable:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;import = [&quot;~/.local/share/alacritty-theme/themes/${ALACRITTY_THEME}.toml&quot;]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then, I dynamically substituted different values &lt;strong&gt;based on the time of day&lt;/strong&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;HOUR=$(date +%H)
+
+if [ &quot;$HOUR&quot; -ge 6 ] &amp;amp;&amp;amp; [ &quot;$HOUR&quot; -lt 19 ]; then
+  export ALACRITTY_THEME=&quot;atom_one_light&quot;
+else
+  export ALACRITTY_THEME=&quot;onedark&quot;
+fi
+
+envsubst &amp;lt; ~/.config/alacritty/alacritty.template.yml &amp;gt; ~/.config/alacritty/alacritty.yml
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;⚠️ Gotchas&lt;/h2&gt;
+&lt;p&gt;While implementing this setup, I ran into a coupe of caveats worth noting:&lt;/p&gt;
+&lt;h3&gt;1. Exporting Variables&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;envsubst&lt;/strong&gt; requires variables to be &lt;strong&gt;exported&lt;/strong&gt; within your script. Without
+&lt;code&gt;export&lt;/code&gt;, &lt;code&gt;envsubst&lt;/code&gt; won&apos;t recognise the variable, and the substitution will
+silently fail.&lt;/p&gt;
+&lt;h3&gt;2. Neovim Cache&lt;/h3&gt;
+&lt;p&gt;Neovim &lt;strong&gt;caches Lua modules&lt;/strong&gt;, including theme settings. Since I&apos;m using
+&lt;a href=&quot;https://nvchad.com/&quot;&gt;NvChad&lt;/a&gt; , I noticed that even after updating the theme in
+&lt;code&gt;~/.config/nvim/lua/chadrc.lua&lt;/code&gt;, changes are not applied immediately. This
+happens because Neovim stores compiled Lua files in &lt;code&gt;~/.cache/nvim/luac&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;To ensure your updated theme is applied on startup, you can force a reaload by
+adding this snippet to &lt;code&gt;chadrc.lua&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;vim.api.nvim_create_autocmd(&quot;User&quot;, {
+	pattern = &quot;VeryLazy&quot;, -- ensures it runs after NvChad lazy loading
+	callback = function()
+		require(&quot;base46&quot;).load_all_highlights()
+	end,
+})
+&lt;/code&gt;&lt;/pre&gt;
+</content:encoded><category>config</category><category>dotfiles</category><author>Cowboy Bebug</author></item><item><title>Prompt Engineering Tips</title><link>https://cowboy-bebug.github.io/posts/prompt-engineering-tips/</link><guid isPermaLink="true">https://cowboy-bebug.github.io/posts/prompt-engineering-tips/</guid><description>App-level caching can cause outdated responses. Always validate and iterate your prompts in the Playground first to ensure accurate testing.</description><pubDate>Fri, 14 Mar 2025 15:05:18 GMT</pubDate><content:encoded>&lt;h2&gt;Always Validate Prompts&lt;/h2&gt;
+&lt;p&gt;I&apos;ve run into this issue several times - updating prompts directly in the
+application doesn&apos;t always result in updated responses. But when testing the
+same prompt in the &lt;a href=&quot;https://platform.openai.com/playground&quot;&gt;Playground&lt;/a&gt;, the
+application suddenly starts reflecting the change.&lt;/p&gt;
+&lt;p&gt;It appears that something is being cached at the application layer, forcing us
+to use the Playground to trigger fresh responses.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;TL;DR&lt;/strong&gt;: When working on prompt engineering, always validate and iterate in
+the playground first.&lt;/p&gt;
+</content:encoded><category>ai</category><category>prompt</category><category>tips</category><author>Cowboy Bebug</author></item><item><title>Automatic Theme Switching for VS Code</title><link>https://cowboy-bebug.github.io/posts/automatic-theme-switching-for-vs-code/</link><guid isPermaLink="true">https://cowboy-bebug.github.io/posts/automatic-theme-switching-for-vs-code/</guid><description>Enable automatic theme switching in VSCode based on your system theme. Quick guide on setting your preferred dark and light themes.</description><pubDate>Fri, 14 Mar 2025 04:37:21 GMT</pubDate><content:encoded>&lt;p&gt;VSCode supports &lt;strong&gt;automatic theme switching&lt;/strong&gt; based on the system theme using
+the &lt;code&gt;window.autoDetectColorScheme&lt;/code&gt; setting.&lt;/p&gt;
+&lt;p&gt;Check available themes with &lt;code&gt;Cmd+Shift+p&lt;/code&gt; -&amp;gt; &lt;code&gt;Preferences: Color Theme&lt;/code&gt;, and
+add the below to &lt;code&gt;settings.json&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;{
+  ...
+  &quot;window.autoDetectColorScheme&quot;: true,
+  &quot;workbench.preferredDarkColorTheme&quot;: &quot;Atom One Dark&quot;,
+  &quot;workbench.preferredLightColorTheme&quot;: &quot;Atom One Light&quot;,
+  ...
+}
+&lt;/code&gt;&lt;/pre&gt;
+</content:encoded><category>config</category><category>vscode</category><author>Cowboy Bebug</author></item><item><title>The AI Engineer Mindset</title><link>https://cowboy-bebug.github.io/posts/the-ai-engineer-mindset/</link><guid isPermaLink="true">https://cowboy-bebug.github.io/posts/the-ai-engineer-mindset/</guid><description>A collection of memes from a recent talk I gave on how engineers can thrive in the AI era. No slides, just key mindsets—amplified through humor.</description><pubDate>Wed, 19 Feb 2025 09:42:14 GMT</pubDate><content:encoded>&lt;h2&gt;Background&lt;/h2&gt;
+&lt;p&gt;I recently gave a talk at a company-wide event on the mindset engineers should
+adopt in the age of AI. I had a lot of fun creating the memes for it, and I&apos;m
+sharing them here.&lt;/p&gt;
+&lt;p&gt;I&apos;ve left out the actual talking points, but I hope the memes speak for
+themselves and convey the key ideas.&lt;/p&gt;
+&lt;h2&gt;⚡ AI Is an Amplifier, Not a Replacement&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&quot;./../assets/9koskx.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+&lt;h2&gt;🌍 Be a Generalist&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&quot;./../assets/9koron.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+&lt;h2&gt;🚀 Be a Founder&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&quot;./../assets/9ks4x1.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+&lt;h2&gt;🔍 Be a Skeptic&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&quot;./../assets/9kotji.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+&lt;h2&gt;🤔 Be a Contrarian&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&quot;./../assets/9koqlf.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+&lt;h2&gt;🕶️ With Great Power Comes Great Responsibility&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&quot;./../assets/9ks53q.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+</content:encoded><category>ai</category><author>Cowboy Bebug</author></item></channel></rss>

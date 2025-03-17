@@ -1,0 +1,103 @@
+<!DOCTYPE html><html lang="en-us" class="animation-prepared" data-astro-cid-e5lvscu2> <head><title>Automatic Theme Switching for Dotfiles</title><meta charset="utf-8"><link rel="canonical" href="https://cowboy-bebug.github.io/posts/automatic-theme-switching-for-dotfiles/"><meta name="description" content="A deep dive into automating day-and-night theme switching across dotfiles using stow + envsubst. Covers alternative tools like yadm and chezmoi, and shares practical tips, including handling Neovim caching."><meta name="robots" content="index, follow"><meta property="og:title" content="Automatic Theme Switching for Dotfiles"><meta property="og:type" content="article"><meta property="og:image" content="https://cowboy-bebug.github.io/placeholder.png"><meta property="og:url" content="https://cowboy-bebug.github.io/"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" type="application/rss+xml" title="攻殻機動隊" href="https://cowboy-bebug.github.io/atom.xml"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v5.0.2"><meta name="twitter:image:src" content="https://cowboy-bebug.github.io/placeholder.png"><meta name="twitter:image:alt" content="A deep dive into automating day-and-night theme switching across dotfiles using stow + envsubst. Covers alternative tools like yadm and chezmoi, and shares practical tips, including handling Neovim caching."><meta name="twitter:creator" content="@moeyua13"><meta name="twitter:site" content="@moeyua13"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Automatic Theme Switching for Dotfiles"><meta name="twitter:description" content="A deep dive into automating day-and-night theme switching across dotfiles using stow + envsubst. Covers alternative tools like yadm and chezmoi, and shares practical tips, including handling Neovim caching."><script>(function(){const theme = "system";
+
+  function updateTheme(theme) {
+    // Check if theme is system
+    if (theme === "system") {
+      // Check OS preference
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      document.documentElement.classList.toggle("dark", prefersDark);
+    } else {
+      // Set theme directly
+      document.documentElement.classList.toggle("dark", theme === "dark");
+    }
+  }
+
+  // Initial theme setup
+  updateTheme(theme);
+
+  // Listen for OS theme changes
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", (e) => {
+      if (theme === "system") {
+        document.documentElement.classList.toggle("dark", e.matches);
+      }
+    });
+})();</script><link rel="stylesheet" href="/_astro/_page_.DxovUNoU.css">
+<style>.tk-meta-input{background-color:#fff}.code-container{position:relative}.clipboard-copy{position:absolute;top:.5rem;right:.5rem;width:1.75rem;height:1.75rem;display:flex;justify-content:center;align-items:center;border-radius:.25rem}.clipboard-copy:hover{background-color:#30363d}
+</style><script type="module" src="/_astro/page.tCc9fVpf.js"></script></head> <body class="h-100vh max-w-1200px min-w-390px mx-a" p="7.5 lg:y-0 lg:x-20" lg="grid gap-x-6 cols-[3fr_1fr] rows-[1fr_9rem]" data-astro-cid-e5lvscu2> <header class="transition-swup-header flex flex-col gap-2.5" m="7.5 lg:x-0 lg:t-20 lg:b-4" lg="row-1-2 col-2-3 justify-between items-start" data-astro-cid-e5lvscu2> <hgroup lg="write-vertical-right items-start b-l-2px b-l-primary-solid text-left" flex="~ col gap-2.5" class="cursor-pointer text-center duration-800 ease-in-out"> <a class="not-underline-hover duration-800 ease-in-out" lg:p="x-2.5 b-12 hover:t-3.75 hover:b-8.75" hover:lg=" bg-primary color-background" href="/"> <h3 class="text-5 font-extrabold font-header">Cowboy Bebug</h3> <h1 class="text-8 font-extrabold font-header">攻殻機動隊</h1> </a> </hgroup> <nav class="text-center font-bold" flex="~ col gap-4"> <ul lg="flex-col items-start text-4" class="text-3.5" flex="~ row gap-2 justify-center"> <li> <a class="" href="/"> Posts </a> </li><li> <a class="" href="/categories"> Categories </a> </li> </ul> <ul flex="~ row gap-1 justify-center"> <li> <a href="https://github.com/cowboy-bebug" target="_blank" title="github" class="not-underline-hover inline-flex items-center"> <span class="i-mdi-github w-6 h-6">github</span> </a> </li> </ul> </nav> </header> <main class="transition-swup-main overflow-y-scroll scrollbar-hide outline-none" lg="row-1-3 col-1-2 py-20 " data-astro-cid-e5lvscu2>   <article class="prose"> <header flex="~ col gap-2"> <h1 class="post-title"> <a class="not-prose" href="/posts/automatic-theme-switching-for-dotfiles/">Automatic Theme Switching for Dotfiles</a> </h1> <div class="text-3.5"> <span>Posted at</span> <time>2025-03-16</time> <a href="/categories/config">
+# config </a><a href="/categories/dotfiles">
+# dotfiles </a> </div> </header>  <h2>Background</h2>
+<p>Following up on my previous post,
+<a href="https://cowboy-bebug.github.io/posts/automatic-theme-switching-for-vs-code">Automatic Theme Switching for VS Code</a>,
+I wanted to extend <em>day-and-night theme switching</em> across all my dotfiles.</p>
+<h2>Existing Tools</h2>
+<p>There are many existing tools for managing dotfiles dynamically. Here are a
+couple examples:</p>
+<h3>Using <a href="https://yadm.io/">yadm</a>:</h3>
+<pre><code class="language-shell"># Split the config into two versions:
+cp ~/.config/alacritty/alacritty.yml ~/.config/alacritty/alacritty.yml##theme=day
+cp ~/.config/alacritty/alacritty.yml ~/.config/alacritty/alacritty.yml##theme=night
+
+# Tell yadm to switch between themes:
+yadm alt theme=day yadm alt theme=night #+end_src
+</code></pre>
+<h3>Using <a href="https://www.chezmoi.io/">chezmoi</a>:</h3>
+<pre><code class="language-toml">{{ if eq .theme &quot;day&quot; }}
+import = [&quot;~/.local/share/alacritty-theme/themes/atom_one_light.toml&quot;]
+{{ else }}
+import = [&quot;~/.local/share/alacritty-theme/themes/onedark.toml&quot;]
+{{ end }}
+#+end_src
+</code></pre>
+<pre><code class="language-shell">chezmoi set --local theme night
+chezmoi apply
+</code></pre>
+<h2>My Approach with <code>stow</code> + <code>envsubst</code></h2>
+<p>However since my dotfiles repo is heavily based on
+<a href="https://www.gnu.org/software/stow/">stow</a>, I wanted a solution that integrates
+well with it. That’s when I came across <code>envsubst</code> from
+<a href="https://www.gnu.org/software/gettext/">GNU gettext</a>, which immediately stood
+out for its <strong>portability</strong> and <strong>availability</strong> as a standard GNU utility.</p>
+<p>I ended up implementing
+<a href="https://github.com/cowboy-bebug/dotfiles/commit/0bf9cbb86b74c531da1793f7ad3a375649e3b9d1">0bf9cbb8</a>
+as my solution. Using <code>envsubst</code> is <strong>simple and minimal</strong>, as expected from a
+GNU utility.</p>
+<h2>Implementation</h2>
+<p>First, I created a <strong>template file</strong> using a shell variable:</p>
+<pre><code class="language-toml">import = [&quot;~/.local/share/alacritty-theme/themes/${ALACRITTY_THEME}.toml&quot;]
+</code></pre>
+<p>Then, I dynamically substituted different values <strong>based on the time of day</strong>:</p>
+<pre><code class="language-shell">HOUR=$(date +%H)
+
+if [ &quot;$HOUR&quot; -ge 6 ] &amp;&amp; [ &quot;$HOUR&quot; -lt 19 ]; then
+  export ALACRITTY_THEME=&quot;atom_one_light&quot;
+else
+  export ALACRITTY_THEME=&quot;onedark&quot;
+fi
+
+envsubst &lt; ~/.config/alacritty/alacritty.template.yml &gt; ~/.config/alacritty/alacritty.yml
+</code></pre>
+<h2>⚠️ Gotchas</h2>
+<p>While implementing this setup, I ran into a coupe of caveats worth noting:</p>
+<h3>1. Exporting Variables</h3>
+<p><strong>envsubst</strong> requires variables to be <strong>exported</strong> within your script. Without
+<code>export</code>, <code>envsubst</code> won’t recognise the variable, and the substitution will
+silently fail.</p>
+<h3>2. Neovim Cache</h3>
+<p>Neovim <strong>caches Lua modules</strong>, including theme settings. Since I’m using
+<a href="https://nvchad.com/">NvChad</a> , I noticed that even after updating the theme in
+<code>~/.config/nvim/lua/chadrc.lua</code>, changes are not applied immediately. This
+happens because Neovim stores compiled Lua files in <code>~/.cache/nvim/luac</code>.</p>
+<p>To ensure your updated theme is applied on startup, you can force a reaload by
+adding this snippet to <code>chadrc.lua</code>:</p>
+<pre><code class="language-lua">vim.api.nvim_create_autocmd(&quot;User&quot;, {
+	pattern = &quot;VeryLazy&quot;, -- ensures it runs after NvChad lazy loading
+	callback = function()
+		require(&quot;base46&quot;).load_all_highlights()
+	end,
+})
+</code></pre>
+  </article> <footer class="mt-5">  <div class="flex items-center gap-2">  <a title="Next post: Prompt Engineering Tips" href="/posts/prompt-engineering-tips"> Next post: Prompt Engineering Tips <span class="inline-block vertical-mid i-mdi-chevron-double-right w-4 h-4"></span> </a> </div> </footer>    </main> <footer class="transition-swup-footer py-7.5" lg="row-2-3 col-2-3" data-astro-cid-e5lvscu2> <p data-astro-cid-gcn2mc3v>© 2025 <a target="_blank" href="https://cowboy-bebug.github.io/">Cowboy Bebug</a></p> </footer> <script type="module">document.addEventListener("animationend",e,!1);function e(){document.documentElement.classList.remove("animation-prepared"),document.removeEventListener("animationend",e,!1)}</script>  </body> </html> <script type="module">function u(e){const t=document.createElement("pre");return t.style.width="1px",t.style.height="1px",t.style.position="fixed",t.style.top="5px",t.textContent=e,t}function a(e){if("clipboard"in navigator)return navigator.clipboard.writeText(e.textContent||"");const t=getSelection();if(t==null)return Promise.reject(new Error);t.removeAllRanges();const n=document.createRange();return n.selectNodeContents(e),t.addRange(n),document.execCommand("copy"),t.removeAllRanges(),Promise.resolve()}function i(e){if("clipboard"in navigator)return navigator.clipboard.writeText(e);const t=document.body;if(!t)return Promise.reject(new Error);const n=u(e);return t.appendChild(n),a(n),t.removeChild(n),Promise.resolve()}async function d(e){const t=e.getAttribute("for"),n=e.getAttribute("value");function o(){e.dispatchEvent(new CustomEvent("clipboard-copy",{bubbles:!0}))}if(e.getAttribute("aria-disabled")!=="true"){if(n)await i(n),o();else if(t){const r="getRootNode"in Element.prototype?e.getRootNode():e.ownerDocument;if(!(r instanceof Document||"ShadowRoot"in window&&r instanceof ShadowRoot))return;const c=r.getElementById(t);c&&(await p(c),o())}}}function p(e){return e instanceof HTMLInputElement||e instanceof HTMLTextAreaElement?i(e.value):e instanceof HTMLAnchorElement&&e.hasAttribute("href")?i(e.href):a(e)}function f(e){const t=e.currentTarget;t instanceof HTMLElement&&d(t)}function l(e){if(e.key===" "||e.key==="Enter"){const t=e.currentTarget;t instanceof HTMLElement&&(e.preventDefault(),d(t))}}function m(e){e.currentTarget.addEventListener("keydown",l)}function y(e){e.currentTarget.removeEventListener("keydown",l)}class h extends HTMLElement{static define(t="clipboard-copy",n=customElements){return n.define(t,this),this}constructor(){super(),this.addEventListener("click",f),this.addEventListener("focus",m),this.addEventListener("blur",y)}connectedCallback(){this.hasAttribute("tabindex")||this.setAttribute("tabindex","0"),this.hasAttribute("role")||this.setAttribute("role","button")}get value(){return this.getAttribute("value")||""}set value(t){this.setAttribute("value",t)}}const s=typeof globalThis<"u"?globalThis:window;try{s.ClipboardCopyElement=h.define()}catch(e){if(!(s.DOMException&&e instanceof DOMException&&e.name==="NotSupportedError")&&!(e instanceof ReferenceError))throw e}document.addEventListener("clipboard-copy",e=>{const n=e.target.querySelector(".icon");n.classList.replace("i-mdi-content-copy","i-mdi-check"),setTimeout(()=>{n.classList.replace("i-mdi-check","i-mdi-content-copy")},1500)});const b=Array.from(document.querySelectorAll("pre")),g="<div class='i-mdi-content-copy icon text-white'></div>";for(const e of b){const t=document.createElement("div");t.className="code-container";const n=document.createElement("clipboard-copy"),o=e.querySelector("code");n.value=o?.textContent??"",n.className="clipboard-copy",n.innerHTML=g,e.appendChild(n),e.parentNode?.insertBefore(t,e),t.appendChild(e)}</script> 
