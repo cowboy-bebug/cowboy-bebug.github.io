@@ -1,8 +1,8 @@
 import type { Post } from '~/types'
-import { getCollection } from 'astro:content'
 import dayjs from 'dayjs'
 import MarkdownIt from 'markdown-it'
 import sanitizeHtml from 'sanitize-html'
+import { getBlogs } from './blogs'
 
 export async function getCategories() {
   const posts = await getPosts()
@@ -22,7 +22,7 @@ export async function getCategories() {
 }
 
 export async function getPosts(isArchivePage = false) {
-  const posts = await getCollection('posts')
+  const posts = await getBlogs()
 
   posts.sort((a, b) => {
     if (isArchivePage) {
