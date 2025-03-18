@@ -20,7 +20,11 @@ function parseFilename(filename: string): Blog {
   return {
     slug: title,
     title: toTitleCase(title.replaceAll('-', ' ')),
-    categories: keywords ? keywords.split('_') : [],
+    categories: keywords
+      ? keywords
+        .split('_')
+        .filter(keyword => keyword !== 'blog')
+      : [],
     pubDate: parseCompactDate(timestamp),
     filename,
   }
@@ -102,7 +106,11 @@ function renderMarkdownContent(content: string): string {
 export async function getBlogs(): Promise<Post[]> {
   try {
     const contents = await getContents()
-    const blogFiles = contents.filter(({ name, type }) => type === 'file' && name.endsWith('.md'))
+    const blogFiles = contents
+      .filter(({ name, type }) => type === 'file'
+        && name.includes('_blog')
+        && !name.includes('_onit')
+        && name.endsWith('.md'))
     const posts = await Promise.all(
       blogFiles
         .map(async (file) => {
