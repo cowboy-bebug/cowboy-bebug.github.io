@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="en-us" class="animation-prepared" data-astro-cid-e5lvscu2> <head><title>Beware the Enum Gotcha in React Conditional Rendering</title><meta charset="utf-8"><link rel="canonical" href="https://cowboy-bebug.github.io/posts/beware-the-enum-gotcha-in-react-conditional-rendering/"><meta name="description" content="A subtle bug in React JSX caused by using a TypeScript enum with 0 as a value and how a simple check for undefined can save your UI from disappearing elements."><meta name="robots" content="index, follow"><meta property="og:title" content="Beware the Enum Gotcha in React Conditional Rendering"><meta property="og:type" content="article"><meta property="og:image" content="https://cowboy-bebug.github.io/placeholder.png"><meta property="og:url" content="https://cowboy-bebug.github.io/"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" type="application/rss+xml" title="攻殻機動隊" href="https://cowboy-bebug.github.io/atom.xml"><meta name="viewport" content="width=device-width"><meta name="generator" content="Astro v5.0.2"><meta name="twitter:image:src" content="https://cowboy-bebug.github.io/placeholder.png"><meta name="twitter:image:alt" content="A subtle bug in React JSX caused by using a TypeScript enum with 0 as a value and how a simple check for undefined can save your UI from disappearing elements."><meta name="twitter:creator" content="@moeyua13"><meta name="twitter:site" content="@moeyua13"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Beware the Enum Gotcha in React Conditional Rendering"><meta name="twitter:description" content="A subtle bug in React JSX caused by using a TypeScript enum with 0 as a value and how a simple check for undefined can save your UI from disappearing elements."><script>(function(){const theme = "system";
+
+  function updateTheme(theme) {
+    // Check if theme is system
+    if (theme === "system") {
+      // Check OS preference
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      document.documentElement.classList.toggle("dark", prefersDark);
+    } else {
+      // Set theme directly
+      document.documentElement.classList.toggle("dark", theme === "dark");
+    }
+  }
+
+  // Initial theme setup
+  updateTheme(theme);
+
+  // Listen for OS theme changes
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", (e) => {
+      if (theme === "system") {
+        document.documentElement.classList.toggle("dark", e.matches);
+      }
+    });
+})();</script><link rel="stylesheet" href="/_astro/_page_.DxovUNoU.css">
+<style>.tk-meta-input{background-color:#fff}.code-container{position:relative}.clipboard-copy{position:absolute;top:.5rem;right:.5rem;width:1.75rem;height:1.75rem;display:flex;justify-content:center;align-items:center;border-radius:.25rem}.clipboard-copy:hover{background-color:#30363d}
+</style><script type="module" src="/_astro/page.tCc9fVpf.js"></script></head> <body class="h-100vh max-w-1200px min-w-390px mx-a" p="7.5 lg:y-0 lg:x-20" lg="grid gap-x-6 cols-[3fr_1fr] rows-[1fr_9rem]" data-astro-cid-e5lvscu2> <header class="transition-swup-header flex flex-col gap-2.5" m="7.5 lg:x-0 lg:t-20 lg:b-4" lg="row-1-2 col-2-3 justify-between items-start" data-astro-cid-e5lvscu2> <hgroup lg="write-vertical-right items-start b-l-2px b-l-primary-solid text-left" flex="~ col gap-2.5" class="cursor-pointer text-center duration-800 ease-in-out"> <a class="not-underline-hover duration-800 ease-in-out" lg:p="x-2.5 b-12 hover:t-3.75 hover:b-8.75" hover:lg=" bg-primary color-background" href="/"> <h3 class="text-5 font-extrabold font-header">Cowboy Bebug</h3> <h1 class="text-8 font-extrabold font-header">攻殻機動隊</h1> </a> </hgroup> <nav class="text-center font-bold" flex="~ col gap-4"> <ul lg="flex-col items-start text-4" class="text-3.5" flex="~ row gap-2 justify-center"> <li> <a class="" href="/"> Posts </a> </li><li> <a class="" href="/categories"> Categories </a> </li> </ul> <ul flex="~ row gap-1 justify-center"> <li> <a href="https://github.com/cowboy-bebug" target="_blank" title="github" class="not-underline-hover inline-flex items-center"> <span class="i-mdi-github w-6 h-6">github</span> </a> </li> </ul> </nav> </header> <main class="transition-swup-main overflow-y-scroll scrollbar-hide outline-none" lg="row-1-3 col-1-2 py-20 " data-astro-cid-e5lvscu2>   <article class="prose"> <header flex="~ col gap-2"> <h1 class="post-title"> <a class="not-prose" href="/posts/beware-the-enum-gotcha-in-react-conditional-rendering/">Beware the Enum Gotcha in React Conditional Rendering</a> </h1> <div class="text-3.5"> <span>Posted at</span> <time>2025-04-04</time> <a href="/categories/bug">
+# bug </a><a href="/categories/react">
+# react </a><a href="/categories/typescript">
+# typescript </a> </div> </header>  <p>Recently at work, I ran into a sneaky bug while working with a React component
+and a TypeScript enum. If you’ve ever used enums to drive UI behavior (like
+rendering an icon or status), this one might trip you up too.</p>
+<h2>The Setup</h2>
+<p>Imagine you’re building a button component that optionally displays an icon
+based on a TypeScript enum:</p>
+<pre><code class="language-ts">export enum Status {
+  Success,
+  Warning,
+  Error,
+}
+</code></pre>
+<p>And you have a helper to map the enum to an icon:</p>
+<pre><code class="language-ts">const getStatusIcon = (status: Status): string =&gt; {
+  switch (icon) {
+    case Status.Success:
+      return &quot;✔️&quot;;
+    case Status.Warning:
+      return &quot;⚠️&quot;;
+    case Status.Error:
+      return &quot;❌&quot;;
+  }
+};
+</code></pre>
+<p>Now, you use this inside your React component:</p>
+<pre><code class="language-tsx">const StatusButton: React.FC&lt;{ label: string; status?: Status }&gt; = (props) =&gt; {
+  const icon = props.status ? getStatusIcon(props.status) : null;
+  return (
+    &lt;button&gt;
+      {icon &amp;&amp; &lt;span&gt;{icon}&lt;/span&gt;} {props.label}
+    &lt;/button&gt;
+  );
+};
+</code></pre>
+<p>Looks fine, right? But then you notice that <strong>when <code>status</code> is <code>Status.Success</code>,
+no icon renders</strong>.</p>
+<h2>The Bug</h2>
+<p>This happens because <code>Status.Success</code> equals <code>0</code>. In JavaScript, <code>0</code> is <em>falsy</em>,
+so the condition <code>props.status ?</code> fails even though the value is valid.</p>
+<h3>TL;DR:</h3>
+<pre><code class="language-ts">props.status ? ... // ❌ Skips when status === 0
+</code></pre>
+<h2>The Fix ✅</h2>
+<p>Replace the falsy check with a strict <code>undefined</code> check:</p>
+<pre><code class="language-tsx">const StatusButton: React.FC&lt;{ label: string; status?: Status }&gt; = (props) =&gt; {
+  const icon = props.status !== undefined ? getStatusIcon(props.status) : null;
+  return (
+    &lt;button&gt;
+      {icon &amp;&amp; &lt;span&gt;{icon}&lt;/span&gt;} {props.label}
+    &lt;/button&gt;
+  );
+};
+</code></pre>
+<p>Now even if <code>status === 0</code> (or <code>Status.Success</code>), it’ll still work properly.</p>
+<h2>Takeaway</h2>
+<p>When using enums in JSX or conditional rendering:</p>
+<ul>
+<li><strong>Avoid implicit boolean checks</strong> (<code>if (enumValue)</code>)</li>
+<li><strong>Use <code>!== undefined</code></strong> to check if an enum prop is present</li>
+</ul>
+<p>It’s a small tweak that can save hours of head-scratching when something
+mysteriously doesn’t render.</p>
+  </article> <footer class="mt-5">  <div class="flex items-center gap-2">  <a title="Next post: Automatic Theme Switching for Dotfiles" href="/posts/automatic-theme-switching-for-dotfiles"> Next post: Automatic Theme Switching for Dotfiles <span class="inline-block vertical-mid i-mdi-chevron-double-right w-4 h-4"></span> </a> </div> </footer>    </main> <footer class="transition-swup-footer py-7.5" lg="row-2-3 col-2-3" data-astro-cid-e5lvscu2> <p data-astro-cid-gcn2mc3v>© 2025 <a target="_blank" href="https://cowboy-bebug.github.io/">Cowboy Bebug</a></p> </footer> <script type="module">document.addEventListener("animationend",e,!1);function e(){document.documentElement.classList.remove("animation-prepared"),document.removeEventListener("animationend",e,!1)}</script>  </body> </html> <script type="module">function u(e){const t=document.createElement("pre");return t.style.width="1px",t.style.height="1px",t.style.position="fixed",t.style.top="5px",t.textContent=e,t}function a(e){if("clipboard"in navigator)return navigator.clipboard.writeText(e.textContent||"");const t=getSelection();if(t==null)return Promise.reject(new Error);t.removeAllRanges();const n=document.createRange();return n.selectNodeContents(e),t.addRange(n),document.execCommand("copy"),t.removeAllRanges(),Promise.resolve()}function i(e){if("clipboard"in navigator)return navigator.clipboard.writeText(e);const t=document.body;if(!t)return Promise.reject(new Error);const n=u(e);return t.appendChild(n),a(n),t.removeChild(n),Promise.resolve()}async function d(e){const t=e.getAttribute("for"),n=e.getAttribute("value");function o(){e.dispatchEvent(new CustomEvent("clipboard-copy",{bubbles:!0}))}if(e.getAttribute("aria-disabled")!=="true"){if(n)await i(n),o();else if(t){const r="getRootNode"in Element.prototype?e.getRootNode():e.ownerDocument;if(!(r instanceof Document||"ShadowRoot"in window&&r instanceof ShadowRoot))return;const c=r.getElementById(t);c&&(await p(c),o())}}}function p(e){return e instanceof HTMLInputElement||e instanceof HTMLTextAreaElement?i(e.value):e instanceof HTMLAnchorElement&&e.hasAttribute("href")?i(e.href):a(e)}function f(e){const t=e.currentTarget;t instanceof HTMLElement&&d(t)}function l(e){if(e.key===" "||e.key==="Enter"){const t=e.currentTarget;t instanceof HTMLElement&&(e.preventDefault(),d(t))}}function m(e){e.currentTarget.addEventListener("keydown",l)}function y(e){e.currentTarget.removeEventListener("keydown",l)}class h extends HTMLElement{static define(t="clipboard-copy",n=customElements){return n.define(t,this),this}constructor(){super(),this.addEventListener("click",f),this.addEventListener("focus",m),this.addEventListener("blur",y)}connectedCallback(){this.hasAttribute("tabindex")||this.setAttribute("tabindex","0"),this.hasAttribute("role")||this.setAttribute("role","button")}get value(){return this.getAttribute("value")||""}set value(t){this.setAttribute("value",t)}}const s=typeof globalThis<"u"?globalThis:window;try{s.ClipboardCopyElement=h.define()}catch(e){if(!(s.DOMException&&e instanceof DOMException&&e.name==="NotSupportedError")&&!(e instanceof ReferenceError))throw e}document.addEventListener("clipboard-copy",e=>{const n=e.target.querySelector(".icon");n.classList.replace("i-mdi-content-copy","i-mdi-check"),setTimeout(()=>{n.classList.replace("i-mdi-check","i-mdi-content-copy")},1500)});const b=Array.from(document.querySelectorAll("pre")),g="<div class='i-mdi-content-copy icon text-white'></div>";for(const e of b){const t=document.createElement("div");t.className="code-container";const n=document.createElement("clipboard-copy"),o=e.querySelector("code");n.value=o?.textContent??"",n.className="clipboard-copy",n.innerHTML=g,e.appendChild(n),e.parentNode?.insertBefore(t,e),t.appendChild(e)}</script> 

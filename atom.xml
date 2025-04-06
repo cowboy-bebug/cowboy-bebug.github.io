@@ -1,4 +1,66 @@
-<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>攻殻機動隊</title><description>ネットは広大だわ。</description><link>https://cowboy-bebug.github.io/</link><item><title>Automatic Theme Switching for Dotfiles</title><link>https://cowboy-bebug.github.io/posts/automatic-theme-switching-for-dotfiles/</link><guid isPermaLink="true">https://cowboy-bebug.github.io/posts/automatic-theme-switching-for-dotfiles/</guid><description>A deep dive into automating day-and-night theme switching across dotfiles using stow + envsubst. Covers alternative tools like yadm and chezmoi, and shares practical tips, including handling Neovim caching.</description><pubDate>Sun, 16 Mar 2025 21:23:18 GMT</pubDate><content:encoded>&lt;h2&gt;Background&lt;/h2&gt;
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>攻殻機動隊</title><description>ネットは広大だわ。</description><link>https://cowboy-bebug.github.io/</link><item><title>Beware the Enum Gotcha in React Conditional Rendering</title><link>https://cowboy-bebug.github.io/posts/beware-the-enum-gotcha-in-react-conditional-rendering/</link><guid isPermaLink="true">https://cowboy-bebug.github.io/posts/beware-the-enum-gotcha-in-react-conditional-rendering/</guid><description>A subtle bug in React JSX caused by using a TypeScript enum with 0 as a value and how a simple check for undefined can save your UI from disappearing elements.</description><pubDate>Fri, 04 Apr 2025 17:38:04 GMT</pubDate><content:encoded>&lt;p&gt;Recently at work, I ran into a sneaky bug while working with a React component
+and a TypeScript enum. If you&apos;ve ever used enums to drive UI behavior (like
+rendering an icon or status), this one might trip you up too.&lt;/p&gt;
+&lt;h2&gt;The Setup&lt;/h2&gt;
+&lt;p&gt;Imagine you&apos;re building a button component that optionally displays an icon
+based on a TypeScript enum:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;export enum Status {
+  Success,
+  Warning,
+  Error,
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And you have a helper to map the enum to an icon:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;const getStatusIcon = (status: Status): string =&amp;gt; {
+  switch (icon) {
+    case Status.Success:
+      return &quot;✔️&quot;;
+    case Status.Warning:
+      return &quot;⚠️&quot;;
+    case Status.Error:
+      return &quot;❌&quot;;
+  }
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, you use this inside your React component:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;const StatusButton: React.FC&amp;lt;{ label: string; status?: Status }&amp;gt; = (props) =&amp;gt; {
+  const icon = props.status ? getStatusIcon(props.status) : null;
+  return (
+    &amp;lt;button&amp;gt;
+      {icon &amp;amp;&amp;amp; &amp;lt;span&amp;gt;{icon}&amp;lt;/span&amp;gt;} {props.label}
+    &amp;lt;/button&amp;gt;
+  );
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Looks fine, right? But then you notice that &lt;strong&gt;when &lt;code&gt;status&lt;/code&gt; is &lt;code&gt;Status.Success&lt;/code&gt;,
+no icon renders&lt;/strong&gt;.&lt;/p&gt;
+&lt;h2&gt;The Bug&lt;/h2&gt;
+&lt;p&gt;This happens because &lt;code&gt;Status.Success&lt;/code&gt; equals &lt;code&gt;0&lt;/code&gt;. In JavaScript, &lt;code&gt;0&lt;/code&gt; is &lt;em&gt;falsy&lt;/em&gt;,
+so the condition &lt;code&gt;props.status ?&lt;/code&gt; fails even though the value is valid.&lt;/p&gt;
+&lt;h3&gt;TL;DR:&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;props.status ? ... // ❌ Skips when status === 0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;The Fix ✅&lt;/h2&gt;
+&lt;p&gt;Replace the falsy check with a strict &lt;code&gt;undefined&lt;/code&gt; check:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;const StatusButton: React.FC&amp;lt;{ label: string; status?: Status }&amp;gt; = (props) =&amp;gt; {
+  const icon = props.status !== undefined ? getStatusIcon(props.status) : null;
+  return (
+    &amp;lt;button&amp;gt;
+      {icon &amp;amp;&amp;amp; &amp;lt;span&amp;gt;{icon}&amp;lt;/span&amp;gt;} {props.label}
+    &amp;lt;/button&amp;gt;
+  );
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now even if &lt;code&gt;status === 0&lt;/code&gt; (or &lt;code&gt;Status.Success&lt;/code&gt;), it&apos;ll still work properly.&lt;/p&gt;
+&lt;h2&gt;Takeaway&lt;/h2&gt;
+&lt;p&gt;When using enums in JSX or conditional rendering:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Avoid implicit boolean checks&lt;/strong&gt; (&lt;code&gt;if (enumValue)&lt;/code&gt;)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Use &lt;code&gt;!== undefined&lt;/code&gt;&lt;/strong&gt; to check if an enum prop is present&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;It&apos;s a small tweak that can save hours of head-scratching when something
+mysteriously doesn&apos;t render.&lt;/p&gt;
+</content:encoded><category>bug</category><category>react</category><category>typescript</category><author>Cowboy Bebug</author></item><item><title>Automatic Theme Switching for Dotfiles</title><link>https://cowboy-bebug.github.io/posts/automatic-theme-switching-for-dotfiles/</link><guid isPermaLink="true">https://cowboy-bebug.github.io/posts/automatic-theme-switching-for-dotfiles/</guid><description>A deep dive into automating day-and-night theme switching across dotfiles using stow + envsubst. Covers alternative tools like yadm and chezmoi, and shares practical tips, including handling Neovim caching.</description><pubDate>Sun, 16 Mar 2025 21:23:18 GMT</pubDate><content:encoded>&lt;h2&gt;Background&lt;/h2&gt;
 &lt;p&gt;Following up on my previous post,
 &lt;a href=&quot;./20250314T043721--automatic-theme-switching-for-vs-code__config_vscode.md&quot;&gt;Automatic Theme Switching for VS Code&lt;/a&gt;,
 I wanted to extend &lt;em&gt;day-and-night theme switching&lt;/em&gt; across all my dotfiles.&lt;/p&gt;
